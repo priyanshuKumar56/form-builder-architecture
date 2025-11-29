@@ -33,9 +33,7 @@ const defaultElementSizes: Record<ElementType, { width: number; height: number }
 }
 
 export function EditorCanvas() {
-  const canvasRef = useRef<HTMLDivElement>(null)
-  const [isPanning, setIsPanning] = useState(false)
-  const [startPan, setStartPan] = useState({ x: 0, y: 0 })
+  const artboardRef = useRef<HTMLDivElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
 
   const {
@@ -66,40 +64,10 @@ export function EditorCanvas() {
     artboardPadding,
   } = useEditorStore()
 
-  // Handle panning
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.button === 1 || (e.button === 0 && e.altKey)) {
-        setIsPanning(true)
-        setStartPan({ x: e.clientX - pan.x, y: e.clientY - pan.y })
-        e.preventDefault()
-      }
-    },
-    [pan],
-  )
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (isPanning) {
-        setPan({ x: e.clientX - startPan.x, y: e.clientY - startPan.y })
-      }
-    },
-    [isPanning, startPan, setPan],
-  )
-
-  const handleMouseUp = useCallback(() => {
-    setIsPanning(false)
-  }, [])
-
-  // Handle canvas click (deselect)
-  const handleCanvasClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === canvasRef.current || (e.target as HTMLElement).dataset.canvas) {
-        clearSelection()
-      }
-    },
-    [clearSelection],
-  )
+  // Handle artboard click (deselect)
+  const handleCanvasClick = useCallback(() => {
+    clearSelection()
+  }, [clearSelection])
 
   // Handle drag and drop from component library
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -121,11 +89,12 @@ export function EditorCanvas() {
 
       if (!type || !name) return
 
-      const rect = canvasRef.current?.getBoundingClientRect()
+      const rect = artboardRef.current?.getBoundingClientRect()
       if (!rect) return
 
-      const x = (e.clientX - rect.left - pan.x) / zoom
-      const y = (e.clientY - rect.top - pan.y) / zoom
+      // Compute coordinates relative to artboard (no pan/zoom)
+      const x = e.clientX - rect.left - artboardPadding
+      const y = e.clientY - rect.top - artboardPadding
 
       const snappedX = snapToGrid ? Math.round(x / gridSize) * gridSize : x
       const snappedY = snapToGrid ? Math.round(y / gridSize) * gridSize : y
@@ -152,55 +121,24 @@ export function EditorCanvas() {
     [pan, zoom, snapToGrid, gridSize, elements, addElement],
   )
 
-  // Handle wheel for zoom
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault()
-        const delta = e.deltaY > 0 ? -0.1 : 0.1
-        useEditorStore.getState().setZoom(zoom + delta)
-      }
-    },
-    [zoom],
-  )
+  // Disable zoom/pan interactions on artboard-only mode
 
   return (
-    <div
-      className="flex-1 overflow-hidden bg-canvas-bg relative"
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onWheel={handleWheel}
-    >
-      {/* Canvas Container */}
-      <div
-        ref={canvasRef}
-        className={cn(
-          "absolute inset-0 origin-top-left transition-colors",
-          showGrid && "canvas-grid",
-          isDragOver && "bg-primary/5",
-        )}
-        style={{
-          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-          cursor: isPanning ? "grabbing" : "default",
-        }}
-        onClick={handleCanvasClick}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        data-canvas="true"
-      >
+    <div className="flex-1 overflow-auto bg-background">
+      <div className="w-full flex justify-center p-8">
         {/* Artboard */}
         <div
-          className="absolute bg-card border border-border rounded-lg shadow-2xl"
+          ref={artboardRef}
+          className="relative bg-card border border-border rounded-lg shadow-2xl"
           style={{
-            left: 40,
-            top: 40,
             width: artboardWidth,
             minHeight: 600,
             padding: artboardPadding,
           }}
+          onClick={handleCanvasClick}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
           data-canvas="true"
         >
           {/* Form Title */}
@@ -245,14 +183,9 @@ export function EditorCanvas() {
         </div>
       </div>
 
-      {/* Zoom indicator */}
-      <div className="absolute bottom-4 right-4 bg-card/80 backdrop-blur border border-border rounded-md px-3 py-1.5 text-xs text-muted-foreground">
-        {Math.round(zoom * 100)}%
-      </div>
-
       {/* Empty state */}
       {elementOrder.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">

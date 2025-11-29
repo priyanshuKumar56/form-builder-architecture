@@ -27,11 +27,6 @@ import {
   Download,
   Share2,
   Settings,
-  Grid3X3,
-  Magnet,
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
   Save,
   FolderOpen,
   FilePlus,
@@ -202,6 +197,16 @@ export function EditorToolbar() {
 
           <div className="h-4 w-px bg-border mx-2" />
 
+          {/* Artboard width */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Width</span>
+            <Input
+              className="h-7 w-20 bg-input border-border text-xs"
+              value={Math.round(artboardWidth)}
+              onChange={(e) => setArtboardWidth(Number(e.target.value) || 0)}
+            />
+          </div>
+
           {/* Responsive Breakpoints */}
           <div className="flex items-center bg-secondary rounded-md p-0.5">
             <Tooltip>
@@ -247,79 +252,7 @@ export function EditorToolbar() {
             </Tooltip>
           </div>
 
-          <div className="h-4 w-px bg-border mx-2" />
-
-          {/* Zoom Controls */}
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(zoom - 0.1)}>
-                  <ZoomOut className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Zoom Out</TooltipContent>
-            </Tooltip>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-7 px-2 min-w-[60px]">
-                  <span className="text-xs">{Math.round(zoom * 100)}%</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {[50, 75, 100, 125, 150, 200].map((z) => (
-                  <DropdownMenuItem key={z} onClick={() => setZoom(z / 100)}>
-                    {z === Math.round(zoom * 100) && <Check className="w-3 h-3 mr-2" />}
-                    <span className={z !== Math.round(zoom * 100) ? "ml-5" : ""}>{z}%</span>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(zoom + 0.1)}>
-                  <ZoomIn className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Zoom In</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(1)}>
-                  <Maximize2 className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Fit to Screen</TooltipContent>
-            </Tooltip>
-          </div>
-
-          <div className="h-4 w-px bg-border mx-2" />
-
-          {/* Grid Controls */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant={showGrid ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={toggleGrid}>
-                <Grid3X3 className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Toggle Grid</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={snapToGrid ? "secondary" : "ghost"}
-                size="icon"
-                className="h-7 w-7"
-                onClick={toggleSnapToGrid}
-              >
-                <Magnet className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Snap to Grid</TooltipContent>
-          </Tooltip>
+          {/* Removed Zoom/Grid/Snap controls for artboard-only design */}
         </div>
 
         {/* Right Section - Actions */}
