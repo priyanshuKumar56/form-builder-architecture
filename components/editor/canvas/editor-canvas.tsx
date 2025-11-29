@@ -35,6 +35,9 @@ const defaultElementSizes: Record<ElementType, { width: number; height: number }
 export function EditorCanvas() {
   const artboardRef = useRef<HTMLDivElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+  const [isResizing, setIsResizing] = useState<null | "e" | "s" | "se">(null)
+  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0 })
+  const [initialSize, setInitialSize] = useState({ w: 0, h: 0 })
 
   const {
     elements,
@@ -62,6 +65,12 @@ export function EditorCanvas() {
     currentStepIndex,
     artboardWidth,
     artboardPadding,
+    artboardHeight,
+    setArtboardWidth,
+    setArtboardHeight,
+    setCurrentStepIndex,
+    addStep,
+    removeStep,
   } = useEditorStore()
 
   // Handle artboard click (deselect)
@@ -132,7 +141,8 @@ export function EditorCanvas() {
           className="relative bg-card border border-border rounded-lg shadow-2xl"
           style={{
             width: artboardWidth,
-            minHeight: 600,
+            minHeight: 400,
+            height: artboardHeight,
             padding: artboardPadding,
           }}
           onClick={handleCanvasClick}
@@ -140,6 +150,20 @@ export function EditorCanvas() {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           data-canvas="true"
+          onMouseMove={(e) => {
+            if (!isResizing) return
+            const dx = e.clientX - resizeStart.x
+            const dy = e.clientY - resizeStart.y
+            if (isResizing === "e") {
+              setArtboardWidth(initialSize.w + dx)
+            } else if (isResizing === "s") {
+              setArtboardHeight(initialSize.h + dy)
+            } else if (isResizing === "se") {
+              setArtboardWidth(initialSize.w + dx)
+              setArtboardHeight(initialSize.h + dy)
+            }
+          }}
+          onMouseUp={() => setIsResizing(null)}
         >
           {/* Form Title */}
           <div className="mb-8" data-canvas="true">
@@ -180,6 +204,66 @@ export function EditorCanvas() {
               />
             )
           })}
+
+          {/* Artboard resize handles */}
+          <div
+            className="absolute top-1/2 -right-2 w-3 h-6 bg-primary rounded cursor-e-resize"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              setIsResizing("e")
+              setResizeStart({ x: e.clientX, y: e.clientY })
+              setInitialSize({ w: artboardWidth, h: artboardHeight })
+            }}
+          />
+          <div
+            className="absolute -bottom-2 left-1/2 w-6 h-3 bg-primary rounded cursor-s-resize"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              setIsResizing("s")
+              setResizeStart({ x: e.clientX, y: e.clientY })
+              setInitialSize({ w: artboardWidth, h: artboardHeight })
+            }}
+          />
+          <div
+            className="absolute -bottom-2 -right-2 w-3 h-3 bg-primary rounded cursor-se-resize"
+            onMouseDown={(e) => {
+              e.preventDefault()
+              setIsResizing("se")
+              setResizeStart({ x: e.clientX, y: e.clientY })
+              setInitialSize({ w: artboardWidth, h: artboardHeight })
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Pages control below artboard */}
+      <div className="w-full flex items-center justify-center pb-6">
+        <div className="flex items-center gap-2 bg-card border border-border rounded-md px-3 py-2">
+          {steps.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => setCurrentStepIndex(i)}
+              className={cn(
+                "text-xs px-2 py-1 rounded border",
+                i === currentStepIndex ? "bg-primary text-primary-foreground border-primary" : "border-border"
+              )}
+            >
+              {s.name}
+            </button>
+          ))}
+          <button
+            className="text-xs px-2 py-1 rounded border border-border hover:bg-secondary"
+            onClick={() => addStep()}
+          >
+            + Add Page
+          </button>
+          <button
+            className="text-xs px-2 py-1 rounded border border-border text-destructive hover:bg-secondary"
+            onClick={() => removeStep(currentStepIndex)}
+            disabled={steps.length <= 1}
+          >
+            Delete
+          </button>
         </div>
       </div>
 

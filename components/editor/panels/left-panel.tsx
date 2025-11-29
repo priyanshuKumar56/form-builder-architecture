@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import type React from "react"
 import { useEditorStore } from "@/lib/store/editor-store"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -124,6 +125,7 @@ export function LeftPanel() {
     elementOrder,
     steps,
     currentStepIndex,
+    setCurrentStepIndex,
     selectedIds,
     selectElement,
     addElement,
@@ -223,6 +225,9 @@ export function LeftPanel() {
             duplicateElement={duplicateElement}
             updateElement={updateElement}
             searchQuery={searchQuery}
+            steps={steps}
+            currentStepIndex={currentStepIndex}
+            setCurrentStepIndex={setCurrentStepIndex}
           />
         ) : (
           <div className="p-2 space-y-1">
@@ -278,6 +283,9 @@ interface LayersPanelProps {
   duplicateElement: (id: string) => void
   updateElement: (id: string, updates: Partial<FormElement>) => void
   searchQuery: string
+  steps: { id: string; name: string; elements: string[] }[]
+  currentStepIndex: number
+  setCurrentStepIndex: (index: number) => void
 }
 
 function LayersPanel({
@@ -289,6 +297,9 @@ function LayersPanel({
   duplicateElement,
   updateElement,
   searchQuery,
+  steps,
+  currentStepIndex,
+  setCurrentStepIndex,
 }: LayersPanelProps) {
   const filteredOrder = elementOrder.filter((id) => {
     const element = elements[id]
@@ -331,82 +342,118 @@ function LayersPanel({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="p-2 space-y-0.5">
-        {[...filteredOrder].reverse().map((id) => {
-          const element = elements[id]
-          if (!element) return null
-
-          const Icon = getElementIcon(element.type)
-          const isSelected = selectedIds.includes(id)
-
-          return (
-            <div
-              key={id}
-              onClick={(e) => selectElement(id, e.metaKey || e.ctrlKey)}
+      <div className="p-2 space-y-2">
+        {/* Pages list (nested tree root) */}
+        <div className="space-y-1">
+          {steps.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => setCurrentStepIndex(i)}
               className={cn(
-                "group flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors",
-                isSelected ? "bg-primary/20 text-foreground" : "hover:bg-sidebar-hover text-foreground",
+                "w-full flex items-center justify-between px-2 py-1 rounded border text-xs",
+                i === currentStepIndex ? "bg-primary text-primary-foreground border-primary" : "border-border text-foreground hover:bg-sidebar-hover",
               )}
             >
-              <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="flex-1 text-sm truncate">{element.name}</span>
+              <span className="font-medium">{s.name}</span>
+              <span className={cn("ml-2", i === currentStepIndex ? "opacity-90" : "text-muted-foreground")}>
+                {s.elements.length}
+              </span>
+            </button>
+          ))}
+        </div>
 
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        updateElement(id, { visible: !element.visible })
-                      }}
-                    >
-                      {element.visible !== false ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Toggle Visibility</TooltipContent>
-                </Tooltip>
+        {/* Layers list (nested by parent) */}
+        {(() => {
+          const byParent: Record<string, string[]> = {}
+          const ROOT = "__root__"
+          filteredOrder.forEach((eid) => {
+            const p = elements[eid]?.parentId
+            const key = p ?? ROOT
+            if (!byParent[key]) byParent[key] = []
+            byParent[key].push(eid)
+          })
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        updateElement(id, { locked: !element.locked })
-                      }}
-                    >
-                      {element.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Toggle Lock</TooltipContent>
-                </Tooltip>
+          const renderTree = (parentId: string, depth: number): React.ReactNode[] => {
+            const ids = byParent[parentId] || []
+            return ids.flatMap((id: string) => {
+              const element = elements[id]
+              if (!element) return []
+              const Icon = getElementIcon(element.type)
+              const isSelected = selectedIds.includes(id)
+              const row = (
+                <div
+                  key={id}
+                  onClick={(e) => selectElement(id, e.metaKey || e.ctrlKey)}
+                  className={cn(
+                    "group flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-colors",
+                    isSelected ? "bg-primary/20 text-foreground" : "hover:bg-sidebar-hover text-foreground",
+                  )}
+                  style={{ paddingLeft: 8 + depth * 12 }}
+                >
+                  <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="flex-1 text-sm truncate">{element.name}</span>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
-                      <MoreHorizontal className="w-3 h-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => duplicateElement(id)}>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Duplicate
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => deleteElement(id)} className="text-destructive">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          )
-        })}
+                  <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            updateElement(id, { visible: !element.visible })
+                          }}
+                        >
+                          {element.visible !== false ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Toggle Visibility</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            updateElement(id, { locked: !element.locked })
+                          }}
+                        >
+                          {element.locked ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Toggle Lock</TooltipContent>
+                    </Tooltip>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => e.stopPropagation()}>
+                          <MoreHorizontal className="w-3 h-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => duplicateElement(id)}>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => deleteElement(id)} className="text-destructive">
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              )
+              return [row, ...renderTree(id, depth + 1)]
+            })
+          }
+
+          return renderTree(ROOT, 0)
+        })()}
       </div>
     </TooltipProvider>
   )

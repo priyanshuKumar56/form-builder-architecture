@@ -17,8 +17,17 @@ const deviceWidths: Record<PreviewDevice, number> = {
 }
 
 export function PreviewModal() {
-  const { togglePreviewMode, elements, elementOrder, projectName } = useEditorStore()
+  const {
+    togglePreviewMode,
+    elements,
+    elementOrder,
+    projectName,
+    steps,
+    formTitle,
+    formDescription,
+  } = useEditorStore()
   const [device, setDevice] = useState<PreviewDevice>("desktop")
+  const [pageIndex, setPageIndex] = useState(0)
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center">
@@ -79,12 +88,12 @@ export function PreviewModal() {
           <ScrollArea className="h-full max-h-[80vh]">
             <div className="p-8">
               <div className="mb-8">
-                <h1 className="text-2xl font-semibold text-foreground mb-2">Contact Form</h1>
-                <p className="text-sm text-muted-foreground">Fill out the form below to get in touch.</p>
+                <h1 className="text-2xl font-semibold text-foreground mb-2">{formTitle}</h1>
+                <p className="text-sm text-muted-foreground">{formDescription}</p>
               </div>
 
               <div className="space-y-6">
-                {elementOrder.map((id) => {
+                {(steps[pageIndex]?.elements || elementOrder).map((id: string) => {
                   const element = elements[id]
                   if (!element || element.visible === false) return null
 
@@ -95,13 +104,52 @@ export function PreviewModal() {
                   )
                 })}
 
-                {elementOrder.length === 0 && (
+                {steps.length > 0 && (
+                  <div className="mt-6 flex flex-wrap gap-2">
+                    {steps.map((s, i) => (
+                      <Button
+                        key={s.id}
+                        variant={i === pageIndex ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setPageIndex(i)}
+                        className="text-xs"
+                      >
+                        {s.name}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+
+                {(steps[pageIndex]?.elements || elementOrder).length === 0 && (
                   <div className="text-center py-12 text-muted-foreground">
                     <p>No form elements yet.</p>
                     <p className="text-sm">Add components to see them here.</p>
                   </div>
                 )}
               </div>
+
+              {/* Pagination controls */}
+              {steps.length > 1 && (
+                <div className="mt-8 flex items-center justify-between">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setPageIndex((p) => Math.max(0, p - 1))}
+                    disabled={pageIndex === 0}
+                    className="gap-2"
+                  >
+                    Prev
+                  </Button>
+                  <div className="text-xs text-muted-foreground">Page {pageIndex + 1} of {steps.length}</div>
+                  <Button
+                    size="sm"
+                    onClick={() => setPageIndex((p) => Math.min(steps.length - 1, p + 1))}
+                    className="gap-2"
+                  >
+                    {pageIndex === steps.length - 1 ? "Submit" : "Next"}
+                  </Button>
+                </div>
+              )}
             </div>
           </ScrollArea>
         </div>

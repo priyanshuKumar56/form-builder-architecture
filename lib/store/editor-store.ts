@@ -100,6 +100,7 @@ export interface EditorState {
   gridSize: number
   artboardWidth: number
   artboardPadding: number
+  artboardHeight: number
 
   // UI State
   leftPanelTab: "layers" | "components"
@@ -138,6 +139,7 @@ export interface EditorState {
   removeStep: (index: number) => void
   renameStep: (index: number, name: string) => void
   setArtboardWidth: (w: number) => void
+  setArtboardHeight: (h: number) => void
   undo: () => void
   redo: () => void
   saveToHistory: () => void
@@ -165,6 +167,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   gridSize: 8,
   artboardWidth: 720,
   artboardPadding: 40,
+  artboardHeight: 800,
   leftPanelTab: "components",
   rightPanelTab: "design",
   isPreviewMode: false,
@@ -338,6 +341,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ steps: newSteps })
   },
   setArtboardWidth: (w) => set({ artboardWidth: Math.max(360, Math.min(w, 1440)) }),
+  setArtboardHeight: (h) => set({ artboardHeight: Math.max(400, Math.min(h, 2000)) }),
 
   undo: () => {
     const state = get()
